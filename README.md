@@ -3,148 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Happy Birthday Cherry - 迷宫游戏</title>
+    <title>Happy Birthday Cherry - Maze</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #282c34;
-            color: white;
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            flex-direction: column;
         }
         #maze {
             display: grid;
             grid-template-columns: repeat(30, 20px);
-            grid-gap: 1px;
-            justify-content: center;
-            margin: 20px auto;
+            grid-template-rows: repeat(30, 20px);
+            gap: 1px;
+            margin-bottom: 20px; /* Add margin so buttons don't overlap maze */
         }
         .cell {
             width: 20px;
             height: 20px;
-            background-color: #222;
-            display: inline-block;
+            background-color: white;
+            border: 1px solid #ddd;
         }
-        .path {
-            background-color: #555;
+        .wall {
+            background-color: blue;
         }
         .player {
-            background-color: #00ff00;
+            background-color: red;
         }
-        .exit {
-            background-color: #ff0000;
+        .goal {
+            background-color: green;
         }
-        .button-container {
-            margin: 20px;
+        #controls {
+            display: flex;
+            justify-content: center;
+            width: 100%;
         }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
+        .btn {
+            width: 50px;
+            height: 50px;
             margin: 5px;
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            font-size: 20px;
             cursor: pointer;
-            font-size: 16px;
         }
-        button:hover {
-            background-color: #45a049;
-        }
-        .hidden {
+        #message {
+            font-size: 24px;
+            font-weight: bold;
+            color: red;
             display: none;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+        #hint {
+            font-size: 16px;
+            color: blue;
+            font-weight: bold;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
+    <div id="maze"></div>
+    <div id="hint">The blue means the wall.</div>
+    <div id="message">Happy Birthday Cherry!</div>
+    <div id="controls">
+        <button class="btn" id="up">↑</button>
+        <button class="btn" id="left">←</button>
+        <button class="btn" id="down">↓</button>
+        <button class="btn" id="right">→</button>
+    </div>
 
-<h1>Happy Birthday Cherry! 迷宫游戏</h1>
-<div id="maze"></div>
-<div class="button-container">
-    <button onclick="move('up')">↑</button>
-    <button onclick="move('left')">←</button>
-    <button onclick="move('right')">→</button>
-    <button onclick="move('down')">↓</button>
-</div>
+    <script>
+        const mazeSize = 30;
+        const maze = [];
+        let playerPos = { x: 1, y: 1 };
+        let goalPos = { x: mazeSize - 2, y: mazeSize - 2 };
+        let gameOver = false;
 
-<div id="congratulations" class="hidden">
-    <h2>Congratulations! You found the exit!</h2>
-    <h3>Happy Birthday Cherry!</h3>
-</div>
-
-<script>
-    let maze = [];
-    let playerPosition = { x: 1, y: 1 };
-    let exitPosition = { x: 28, y: 28 };
-
-    // Generate maze with less walls and more open paths
-    function generateMaze(rows, cols) {
-        let mazeArray = [];
-        for (let i = 0; i < rows; i++) {
-            let row = [];
-            for (let j = 0; j < cols; j++) {
-                // Fewer walls (only 20% chance for a wall)
-                if (Math.random() < 0.2) {
-                    row.push('X'); // wall
-                } else {
-                    row.push('.'); // path
+        function generateMaze() {
+            for (let i = 0; i < mazeSize; i++) {
+                maze[i] = [];
+                for (let j = 0; j < mazeSize; j++) {
+                    // Decrease the chance of walls, change the probability to > 0.7 for fewer walls
+                    maze[i][j] = Math.random() > 0.7 ? 'wall' : 'path'; // Adjusted probability for fewer walls
                 }
             }
-            mazeArray.push(row);
+            maze[0][0] = 'path'; // Start
+            maze[mazeSize - 1][mazeSize - 1] = 'goal'; // Goal
+            maze[1][1] = 'player'; // Player start
         }
 
-        // Ensure the player and exit positions are open paths
-        mazeArray[playerPosition.x][playerPosition.y] = 'P';
-        mazeArray[exitPosition.x][exitPosition.y] = 'E';
-
-        return mazeArray;
-    }
-
-    function displayMaze() {
-        const mazeContainer = document.getElementById('maze');
-        mazeContainer.innerHTML = '';
-        for (let i = 0; i < maze.length; i++) {
-            for (let j = 0; j < maze[i].length; j++) {
-                let cell = document.createElement('div');
-                cell.classList.add('cell');
-                if (maze[i][j] === 'P') {
-                    cell.classList.add('player');
-                } else if (maze[i][j] === 'X') {
-                    cell.classList.add('path');
-                } else if (maze[i][j] === 'E') {
-                    cell.classList.add('exit');
+        function renderMaze() {
+            const mazeElement = document.getElementById('maze');
+            mazeElement.innerHTML = '';
+            for (let y = 0; y < mazeSize; y++) {
+                for (let x = 0; x < mazeSize; x++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    if (maze[y][x] === 'wall') {
+                        cell.classList.add('wall');
+                    }
+                    if (maze[y][x] === 'player') {
+                        cell.classList.add('player');
+                    }
+                    if (maze[y][x] === 'goal') {
+                        cell.classList.add('goal');
+                    }
+                    mazeElement.appendChild(cell);
                 }
-                mazeContainer.appendChild(cell);
             }
         }
-    }
 
-    function move(direction) {
-        const newPosition = { ...playerPosition };
-
-        if (direction === 'up') newPosition.x -= 1;
-        if (direction === 'down') newPosition.x += 1;
-        if (direction === 'left') newPosition.y -= 1;
-        if (direction === 'right') newPosition.y += 1;
-
-        // Ensure new position is within maze bounds and not a wall
-        if (maze[newPosition.x] && maze[newPosition.x][newPosition.y] !== 'X') {
-            maze[playerPosition.x][playerPosition.y] = '.';
-            playerPosition = newPosition;
-            maze[playerPosition.x][playerPosition.y] = 'P';
+        function movePlayer(dx, dy) {
+            if (gameOver) return;
+            const newX = playerPos.x + dx;
+            const newY = playerPos.y + dy;
+            if (newX >= 0 && newY >= 0 && newX < mazeSize && newY < mazeSize && maze[newY][newX] !== 'wall') {
+                maze[playerPos.y][playerPos.x] = 'path';
+                playerPos.x = newX;
+                playerPos.y = newY;
+                maze[playerPos.y][playerPos.x] = 'player';
+                renderMaze();
+                checkGoal();
+            }
         }
 
-        displayMaze();
-
-        // Check if player reaches exit
-        if (playerPosition.x === exitPosition.x && playerPosition.y === exitPosition.y) {
-            setTimeout(function() {
-                document.getElementById('congratulations').classList.remove('hidden');
-            }, 5000); // Wait 5 seconds before showing the congratulations message
+        function checkGoal() {
+            if (playerPos.x === goalPos.x && playerPos.y === goalPos.y) {
+                gameOver = true;
+                // Wait for 5 seconds before showing the message
+                setTimeout(() => {
+                    document.getElementById('message').style.display = 'block';
+                }, 5000);
+            }
         }
-    }
 
-    // Initialize game
-    maze = generateMaze(30, 30);
-    displayMaze();
-</script>
+        function addControlListeners() {
+            document.getElementById('up').addEventListener('click', () => movePlayer(0, -1));
+            document.getElementById('down').addEventListener('click', () => movePlayer(0, 1));
+            document.getElementById('left').addEventListener('click', () => movePlayer(-1, 0));
+            document.getElementById('right').addEventListener('click', () => movePlayer(1, 0));
+        }
 
+        function startGame() {
+            generateMaze();
+            renderMaze();
+            addControlListeners();
+        }
+
+        startGame();
+    </script>
 </body>
 </html>
